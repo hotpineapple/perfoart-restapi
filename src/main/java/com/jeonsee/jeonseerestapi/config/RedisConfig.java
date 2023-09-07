@@ -9,6 +9,9 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+import java.util.Collection;
+import java.util.List;
+
 @Configuration
 public class RedisConfig {
     @Value("${spring.data.redis.host}")
@@ -37,6 +40,7 @@ public class RedisConfig {
 
         return redisTemplate;
     }
+
 
     @Bean
     public StringRedisTemplate stringRedisTemplate() {

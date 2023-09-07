@@ -12,6 +12,8 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.redis.core.ListOperations;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +21,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -28,6 +31,7 @@ public class ExhibitionService {
 
     private final MongoTemplate mongoTemplate;
     private final LikeService likeService;
+    private final RedisTemplate<String, String> redisTemplate;
     private static final Pattern FREE_REGEX = Pattern.compile(".*무료.*");
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -56,6 +60,9 @@ public class ExhibitionService {
     }
 
     public List<String> getExhibitionRealmList() {
+        List<String> list = redisTemplate.opsForList().range("realm",0,-1);
+        if(list != null && list.size() > 0) return list;
+
         List<String> temp = mongoTemplate.aggregate(
                 Aggregation.newAggregation(
                         Aggregation.group("realmName")
@@ -64,11 +71,15 @@ public class ExhibitionService {
                 String.class
         ).getMappedResults().stream().map(str -> str.split(":")[1].replace("}","").replace("\"","")).collect(Collectors.toList());
         Collections.sort(temp);
-
+        redisTemplate.opsForList().leftPushAll("realm", temp);
+        redisTemplate.expire("realm", 1, TimeUnit.DAYS);
         return temp;
     }
 
     public List<String> getExhibitionAreaList() {
+        List<String> list = redisTemplate.opsForList().range("area",0,-1);
+        if(list != null && list.size() > 0) return list;
+
         List<String> temp = mongoTemplate.aggregate(
                 Aggregation.newAggregation(
                         Aggregation.group("area")
@@ -77,11 +88,15 @@ public class ExhibitionService {
                 String.class
         ).getMappedResults().stream().map(str -> str.split(":")[1].replace("}","").replace("\"","")).collect(Collectors.toList());
         Collections.sort(temp);
-
+        redisTemplate.opsForList().leftPushAll("area", temp);
+        redisTemplate.expire("area", 1, TimeUnit.DAYS);
         return temp;
     }
 
     public List<String> getExhibitionPlaceList(String area) {
+        List<String> list = redisTemplate.opsForList().range("place-"+area,0,-1);
+        if(list != null && !list.isEmpty()) return list;
+
         List<String> temp = mongoTemplate.aggregate(
                 Aggregation.newAggregation(
                         Aggregation.match(Criteria.where("area").is(area)),
@@ -91,7 +106,8 @@ public class ExhibitionService {
                 String.class
         ).getMappedResults().stream().map(str -> str.split(":")[1].replace("}","").replace("\"","")).collect(Collectors.toList());
         Collections.sort(temp);
-
+        redisTemplate.opsForList().leftPushAll("place-"+area, temp);
+        redisTemplate.expire("place-"+area, 1, TimeUnit.DAYS);
         return temp;
     }
 
