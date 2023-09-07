@@ -61,7 +61,10 @@ public class ExhibitionService {
 
     public List<String> getExhibitionRealmList() {
         List<String> list = redisTemplate.opsForList().range("realm",0,-1);
-        if(list != null && list.size() > 0) return list;
+        if(list != null && list.size() > 0) {
+            Collections.reverse(list);
+            return list;
+        }
 
         List<String> temp = mongoTemplate.aggregate(
                 Aggregation.newAggregation(
@@ -78,7 +81,10 @@ public class ExhibitionService {
 
     public List<String> getExhibitionAreaList() {
         List<String> list = redisTemplate.opsForList().range("area",0,-1);
-        if(list != null && list.size() > 0) return list;
+        if(list != null && list.size() > 0) {
+            Collections.reverse(list);
+            return list;
+        }
 
         List<String> temp = mongoTemplate.aggregate(
                 Aggregation.newAggregation(
@@ -94,8 +100,11 @@ public class ExhibitionService {
     }
 
     public List<String> getExhibitionPlaceList(String area) {
-        List<String> list = redisTemplate.opsForList().range("place-"+area,0,-1);
-        if(list != null && !list.isEmpty()) return list;
+        List<String> list = redisTemplate.opsForList().range("place-" + area,0,-1);
+        if(list != null && !list.isEmpty()) {
+            Collections.reverse(list);
+            return list;
+        }
 
         List<String> temp = mongoTemplate.aggregate(
                 Aggregation.newAggregation(
@@ -106,8 +115,8 @@ public class ExhibitionService {
                 String.class
         ).getMappedResults().stream().map(str -> str.split(":")[1].replace("}","").replace("\"","")).collect(Collectors.toList());
         Collections.sort(temp);
-        redisTemplate.opsForList().leftPushAll("place-"+area, temp);
-        redisTemplate.expire("place-"+area, 1, TimeUnit.DAYS);
+        redisTemplate.opsForList().leftPushAll("place-" + area, temp);
+        redisTemplate.expire("place-" + area, 1, TimeUnit.DAYS);
         return temp;
     }
 
